@@ -8,16 +8,28 @@ return function(Network, origin)
 
 	local function Include(path)
 		local object = type(path) == "string" and Network.Path(path, origin) or path;
+
+		if Modules[object.Name] then
+			return ErrorType(("%s is already included!"):format(object.Name));
+		end
+
+		if typeof(object) ~= "Instance" then
+			return ErrorType(("%s is not a module, is %s"):format(path, object));
+		end
 		local required = require(object);
 		if type(required) ~= "function" then
 			return ErrorType("returned value is not a function for module", object.Name);
 		end
 		
-		local result, thread;
+		local success, result, thread;
 		coroutine.wrap(function() 
 			thread = coroutine.running();
-			result = required(Network);
+			success, result = pcall(required, Network);
 		end)();
+
+		if not success and result ~= nil then
+			return ErrorType(result);
+		end
 
 		Threads[object.Name] = thread;
 		Modules[object.Name] = result;
@@ -38,6 +50,12 @@ return function(Network, origin)
 				coroutine.resume(thread);
 				connection:Disconnect();
 			end
+		end);
+
+		delay(5, function() 
+			connection:Disconnect();
+			ErrorType(("Cannot get module %s, timed out"):format(name), 2);
+			coroutine.resume(thread);
 		end);
 
 		coroutine.yield();

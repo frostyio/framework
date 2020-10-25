@@ -1,11 +1,11 @@
-local RunService = game:GetService("RunService");
-
 local config = {
 	name = "framework",
 };
 
 local function GetErrorType()
-	return RunService:IsStudio() and error or warn;
+	return function(...) 
+		warn(..., debug.traceback());
+	end;
 end
 
 local function GetToString(self)
@@ -50,10 +50,10 @@ local ClientStorage = setmetatable({
 	__metatable = LockedMetatable,
 
 	__newindex = function(self) 
-		return GetErrorType()("cannot assign index to Storage, use :Set(...) instead", 2);
+		return GetErrorType()("cannot assign index to Storage, use :Set(...) instead");
 	end,
 	__index = function(self) 
-		return GetErrorType()("cannot index in Storage, use :Get(...) instead", 2);
+		return GetErrorType()("cannot index in Storage, use :Get(...) instead");
 	end,
 });
 
@@ -99,7 +99,7 @@ local function Path(dir, origin)
 		elseif child == "." then
 			current = current.Parent;
 		else
-			current = WaitFor(current, child);
+			current = WaitFor(current, child, 5);
 		end
 	end
 
@@ -133,9 +133,10 @@ Storage.GetErrorType = GetErrorType;
 Storage.Path = Path;
 Storage.WaitFor = WaitFor;
 Storage.EventManager = GlobalProxy.EventManager;
-Storage.Include = IncludeFunction(Storage);
+Storage.Include = IncludeFunction(Storage, Path("~/modules"));
 Storage.AddModule("EventManager", GlobalProxy.EventManager);
-Storage.AddModule("Include", GlobalProxy.Include);
+Storage.AddModule("Include", Storage.Include);
+Storage.Include("Create");
 
 -- Finishing
 delay(0, function() -- run on next tick
